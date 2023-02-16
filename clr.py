@@ -2,5 +2,5 @@
 Legacy Python.NET loader for backwards compatibility
 """
 
-from pythonnet import load
+from elan_pythonnet import load
 load()

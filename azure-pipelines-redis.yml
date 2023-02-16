@@ -1,0 +1,128 @@
+trigger:
+  branches:
+    include:
+      - master
+
+variables:
+  prodBranch: 'master'
+  BuildConfiguration: 'Release'
+  version: '0.0.0'
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    versionExt: '${{ variables.version }}.'
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+    versionExt: '${{ variables.version }}.dev'
+  versionRevision: $[counter(variables.versionExt, 0)]
+  fullVersion: '$(versionExt)$(versionRevision)'
+
+  
+resources: # template files reference
+  repositories:
+    - repository: templates
+      type: github
+      name: elancapital/devops
+      endpoint: elancapital
+
+stages:
+- stage: CI
+  displayName: CI
+  jobs:
+
+    - job: BuildPython
+      pool:
+        vmImage: 'ubuntu-latest'
+      displayName: 'Build Python'
+      steps:
+      - task: NuGetToolInstaller@1
+        inputs:
+          versionSpec: '6.0.0'
+
+      - task: NuGetCommand@2
+        inputs:
+          command: 'restore'
+          restoreSolution: '**/Python.Runtime.csproj'
+          feedsToUse: 'select'
+          includeNuGetOrg: true
+
+      - task: Assembly-Info-NetCore@2
+        inputs:
+          Path: '$(Build.SourcesDirectory)'
+          FileNames: '**/Python.Runtime.csproj'
+          InsertAttributes: true
+          FileEncoding: 'auto'
+          WriteBOM: false
+          VersionNumber: '$(fullVersion)'
+          FileVersionNumber: '$(fullVersion)'
+          PackageVersion: '$(fullVersion)'
+          LogLevel: 'verbose'
+          FailOnWarning: false
+          DisableTelemetry: false
+
+      - task: DotNetCoreCLI@2
+        displayName: 'Build $(BuildConfiguration)'
+        inputs:
+          command: 'build'
+          projects: '**/Python.Runtime.csproj'
+          arguments: '--configuration "$(BuildConfiguration)"'
+
+      - template: templates/build/ci-python-package.yml@templates  # Template reference
+        parameters:
+          projectName: 'elan_pythonnet'
+          projectDirectory: ''
+          fullVersion: $(fullVersion)
+          testOptions: --runtime 'coreclr' -k 'test_placeholder'   
+          
+- stage: DeployPackage
+  dependsOn: CI
+  displayName: Deploy Package
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))  # skip step for PRs
+  jobs:
+  - job: DeployPrerelease
+    displayName: Deploy Prerelease
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: none
+    - template: templates/deploy/deploy-python-package-steps.yml@templates  # Template reference
+      parameters:
+        projectName: 'elan_pythonnet'
+        fullVersion: $(fullVersion)
+        prodBranch: $(prodBranch)
+        packageName: 'elan-pythonnet'
+        
+
+- stage: DeployProdPackage
+  displayName: Deploy Prod Package
+  dependsOn: DeployPackage
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], variables.prodBranch))
+
+  jobs:
+  - deployment: DeployProd
+    displayName: Deploy Prod
+    pool:
+      vmImage: windows-latest
+    environment: Prod
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: none
+          - template: templates/deploy/deploy-prod-python-package-steps.yml@templates  # Template reference
+            parameters:
+              packageName: 'elan-pythonnet'
+              fullVersion: $(fullVersion)
+
+  - job: TagGit
+    displayName: Tag Git
+    pool:
+      vmImage: 'ubuntu-latest'
+    dependsOn: DeployProd
+    steps:
+      - checkout: self
+        clean: true
+        persistCredentials: true # required for tagging
+
+      - script: |
+          git tag $(fullVersion)
+          git push --tags
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: Git Tag Production Release

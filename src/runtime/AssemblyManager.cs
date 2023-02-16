@@ -49,6 +49,7 @@ namespace Python.Runtime
         /// </summary>
         internal static void Initialize()
         {
+            Trace.WriteLine("Initialize");
             pypath.Clear();
 
             AppDomain domain = AppDomain.CurrentDomain;
@@ -69,7 +70,7 @@ namespace Python.Runtime
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("Error scanning assembly {0}. {1}", a, ex);
+                    Console.WriteLine("Error scanning assembly {0}. {1}", a, ex);
                 }
             }
         }
@@ -96,6 +97,7 @@ namespace Python.Runtime
         private static void AssemblyLoadHandler(object ob, AssemblyLoadEventArgs args)
         {
             Assembly assembly = args.LoadedAssembly;
+            Debug.WriteLine("Loading: {0}", assembly);
             assemblies.Enqueue(assembly);
             ScanAssembly(assembly);
         }
@@ -110,11 +112,13 @@ namespace Python.Runtime
         /// </summary>
         private static Assembly? ResolveHandler(object ob, ResolveEventArgs args)
         {
+            Debug.WriteLine("Resolve {0}", args.Name);
             var name = new AssemblyName(args.Name);
             foreach (var alreadyLoaded in assemblies)
             {
                 if (AssemblyName.ReferenceMatchesDefinition(name, alreadyLoaded.GetName()))
                 {
+                    Debug.WriteLine("Already loaded {0}", alreadyLoaded);
                     return alreadyLoaded;
                 }
             }
@@ -233,7 +237,15 @@ namespace Python.Runtime
         /// </summary>
         public static Assembly? LoadAssemblyPath(string name)
         {
+            var depsFile = name.Replace(".dll", ".deps.json");
+            if (File.Exists(depsFile))
+            {
+                var resolver = new PluginLoadContext(name);
+                return resolver.LoadFromAssemblyName(AssemblyName.GetAssemblyName(name));
+            }
+
             string path = FindAssembly(name);
+            Debug.WriteLine("Path {0}", path);
             if (path == null) return null;
             return Assembly.LoadFrom(path);
         }
@@ -413,6 +425,8 @@ namespace Python.Runtime
                 }
                 catch (ReflectionTypeLoadException exc)
                 {
+                    if (a.FullName?.StartsWith("System") == false)
+                        Console.WriteLine($"Failed GetTypes {a.FullName}");
                     // Return all types that were successfully loaded
                     return exc.Types.Where(x => x != null && IsExported(x)).ToArray();
                 }
@@ -423,9 +437,15 @@ namespace Python.Runtime
                 {
                     return a.GetExportedTypes().Where(IsExported).ToArray();
                 }
-                catch (FileNotFoundException)
+                catch (FileNotFoundException f)
                 {
+                    Console.WriteLine($"Failed GetTypes {a.FullName}, Exception {f}");
                     return new Type[0];
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Failed GetTypes {a.FullName}, Exception {e}");
+                    throw;
                 }
             }
         }
