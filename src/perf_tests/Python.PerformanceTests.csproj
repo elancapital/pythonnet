@@ -1,24 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
   
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="baseline\Python.Runtime.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="baseline/Python.Runtime.dll">
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
@@ -34,8 +22,12 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\runtime\Python.Runtime.csproj" />
+  </ItemGroup>
+
   <Target Name="GetRuntimeLibBuildOutput" BeforeTargets="Build">
-    <MSBuild Projects="..\runtime\Python.Runtime.csproj" Properties="OutputPath=bin\for_perf\;Configuration=Release;TargetFramework=netstandard2.0" Targets="Build">
+    <MSBuild Projects="..\runtime\Python.Runtime.csproj" Properties="OutputPath=bin\for_perf\;Configuration=Release;TargetFramework=net6.0" Targets="Build">
       <Output TaskParameter="TargetOutputs" ItemName="NewPythonRuntime" />
     </MSBuild>
   </Target>
