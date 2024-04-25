@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 
 namespace Python.Runtime
 {
@@ -225,8 +224,7 @@ namespace Python.Runtime
         /// </summary>
         public static Assembly LoadAssembly(AssemblyName name)
         {
-            var loadContext = AssemblyLoadContext.GetLoadContext(typeof(AssemblyManager).Assembly);
-            return loadContext.LoadFromAssemblyName(name);
+            return Assembly.Load(name);
         }
 
 
@@ -237,9 +235,7 @@ namespace Python.Runtime
         {
             string path = FindAssembly(name);
             if (path == null) return null;
-
-            var loadContext = AssemblyLoadContext.GetLoadContext(typeof(AssemblyManager).Assembly);
-            return loadContext.LoadFromAssemblyPath(path);
+            return Assembly.LoadFrom(path);
         }
 
         /// <summary>
@@ -253,8 +249,7 @@ namespace Python.Runtime
             {
                 if (File.Exists(name))
                 {
-                    var loadContext = AssemblyLoadContext.GetLoadContext(typeof(AssemblyManager).Assembly);
-                    return loadContext.LoadFromAssemblyPath(name);
+                    return Assembly.LoadFrom(name);
                 }
             }
             return null;
