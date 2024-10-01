@@ -179,7 +179,8 @@ class DotNetFinder(importlib.abc.MetaPathFinder):
             using var finderCtorArgs = Runtime.PyTuple_New(0);
             using var finder_inst = Runtime.PyObject_CallObject(findercls, finderCtorArgs.Borrow());
             var metapath = Runtime.PySys_GetObject("meta_path");
-            PythonException.ThrowIfIsNotZero(Runtime.PyList_Append(metapath, finder_inst.BorrowOrThrow()));
+            // Insert at the start so that dotnet modules are found before stubs
+            PythonException.ThrowIfIsNotZero(Runtime.PyList_Insert(metapath, 0, finder_inst.BorrowOrThrow()));
         }
 
         /// <summary>
