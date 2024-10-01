@@ -19,6 +19,9 @@ namespace Python.Runtime.Codecs
 
         internal static bool IsIterable(PyType objectType)
         {
+            //python strings are iterable but unlikely to be a valid conversion to enumerable
+            if (PythonReferenceComparer.Instance.Equals(objectType, Runtime.PyStringType)) return false;
+
             return objectType.HasAttr("__iter__");
         }
 
