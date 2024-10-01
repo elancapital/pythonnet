@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Union, Any
 import clr_loader
+from .clr_loader2 import get_coreclr_command_line
 
 __all__ = ["set_runtime", "set_runtime_from_env", "load", "unload", "get_runtime_info"]
 
@@ -75,6 +76,8 @@ def _create_runtime_from_spec(
             return clr_loader.get_mono(**params)
         elif spec == "coreclr":
             return clr_loader.get_coreclr(**params)
+        elif spec == "coreclrcmd":
+            return get_coreclr_command_line(**params)
         else:
             raise RuntimeError(f"Invalid runtime name: '{spec}'")
     except Exception as exc:
@@ -144,7 +147,7 @@ def load(runtime: Union[clr_loader.Runtime, str, None] = None, **params: str) ->
 
     if func(b"") != 0:
         raise RuntimeError("Failed to initialize Python.Runtime.dll")
-    
+
     _LOADED = True
 
     import atexit
