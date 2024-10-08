@@ -14,12 +14,14 @@ namespace Python.Runtime.CollectionWrappers
         {
             get
             {
+                using var _ = Py.GIL();
                 var item = Runtime.PyList_GetItem(pyObject, index);
                 var pyItem = new PyObject(item);
                 return pyItem.As<T>()!;
             }
             set
             {
+                using var _ = Py.GIL();
                 var pyItem = value.ToPython();
                 var result = Runtime.PyList_SetItem(pyObject, index, new NewReference(pyItem).Steal());
                 if (result == -1)
@@ -37,6 +39,7 @@ namespace Python.Runtime.CollectionWrappers
             if (IsReadOnly)
                 throw new InvalidOperationException("Collection is read-only");
 
+            using var _ = Py.GIL();
             var pyItem = item.ToPython();
 
             int result = Runtime.PyList_Insert(pyObject, index, pyItem);
@@ -46,6 +49,7 @@ namespace Python.Runtime.CollectionWrappers
 
         public void RemoveAt(int index)
         {
+            using var _ = Py.GIL();
             var result = removeAt(index);
 
             //PySequence_DelItem will set an error if it fails.  throw it here

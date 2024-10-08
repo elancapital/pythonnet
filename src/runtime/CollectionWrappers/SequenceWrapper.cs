@@ -14,6 +14,7 @@ namespace Python.Runtime.CollectionWrappers
         {
             get
             {
+                using var _ = Py.GIL();
                 var size = Runtime.PySequence_Size(pyObject.Reference);
                 if (size == -1)
                 {
@@ -38,6 +39,7 @@ namespace Python.Runtime.CollectionWrappers
         {
             if (IsReadOnly)
                 throw new NotImplementedException();
+            using var _ = Py.GIL();
             int result = Runtime.PySequence_DelSlice(pyObject, 0, Count);
             if (result == -1)
             {
@@ -100,6 +102,7 @@ namespace Python.Runtime.CollectionWrappers
 
         public bool Remove(T item)
         {
+            using var _ = Py.GIL();
             var result = removeAt(indexOf(item));
 
             //clear the python exception from PySequence_DelItem
