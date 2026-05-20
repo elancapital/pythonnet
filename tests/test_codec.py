@@ -5,7 +5,12 @@
 import pytest
 import Python.Runtime
 import Python.Test as Test
-from Python.Test import ListConversionTester, ListMember, CodecResetter
+from Python.Test import (
+    CodecResetter,
+    IterableRegressionTester,
+    ListConversionTester,
+    ListMember,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -57,6 +62,19 @@ def test_iterable():
 
     iterable2 = obj_iterable()
     assert 3 == ob.GetLength2(iterable2)
+
+
+def test_iterable_partial_iteration_does_not_hold_gil():
+    """Test to ensure partial enumeration does not hold GIL"""
+    Python.Runtime.Codecs.IterableDecoder.Register()
+    probe = IterableRegressionTester()
+
+    result = probe.PartialIterationDoesNotHoldGIL(int_iterable())
+    assert result == "ok", (
+        "Partial iteration blocked managed callback thread; "
+        "IterableWrapper may still be yielding inside Py.GIL(). "
+        f"Probe result: {result}"
+    )
 
 
 def test_sequence():
