@@ -28,12 +28,16 @@ namespace Python.Runtime.CollectionWrappers
             {
                 while (true)
                 {
-                    using var _ = Py.GIL();
-                    if (!iterObject.MoveNext())
+                    T result;
+                    using (Py.GIL())
                     {
-                        break;
+                        if (!iterObject.MoveNext())
+                        {
+                            break;
+                        }
+                        result = iterObject.Current.As<T>()!;
                     }
-                    yield return iterObject.Current.As<T>()!;
+                    yield return result;
                 }
             }
             finally
